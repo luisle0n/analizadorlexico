@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Autómata Léxico</title>
+
+    <!-- Librería Raphael.js para gráficos vectoriales en SVG -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background-color: #f0f4f8;
+        }
+
+        /* Contenedor con scroll horizontal para visualizar el autómata completo */
+        #canvas-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        /* Área donde Raphael dibuja el autómata */
+        #canvas {
+            width: 3000px; /* Ancho fijo, se puede hacer dinámico */
+            height: 500px;
+            border: 1px solid #ccc;
+            background-color: #ffffff;
+        }
+
+        /* Contenedor para mostrar los tokens reconocidos en formato texto */
+        #tokens {
+            margin-top: 20px;
+            text-align: left;
+            width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+            background: #ffffff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0px 0px 8px rgba(0,0,0,0.1);
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Autómata Léxico (Visualización Dinámica)</h2>
+
+    <!-- Área donde se dibujará el autómata -->
+    <div id="canvas-container">
+        <div id="canvas"></div>
+    </div>
+
+    <!-- Área donde se muestran los tokens procesados -->
+    <div id="tokens">Cargando tokens...</div>
+
+    <script>
+        // Configuración inicial de Raphael
+        const canvasWidth = 10000; // Espacio amplio para muchos tokens
+        const paper = Raphael("canvas", canvasWidth, 500);
+        const circleRadius = 30;
+        const startX = 60;
+        const startY = 200;
+        const gap = 100; // Espacio horizontal entre nodos
+
+        // Cargar tokens desde archivo JSON
+        fetch("tokens.json")
+            .then(res => res.json())
+            .then(tokens => {
+                // Mostrar tokens en texto
+                const div = document.getElementById("tokens");
+                div.innerHTML = "<h3>Tokens Reconocidos:</h3>";
+
+                tokens.forEach((t, i) => {
+                    const span = document.createElement("div");
+                    span.textContent = `${i + 1}. [${t.tipo}] → "${t.valor}"`;
+                    if (t.tipo === "ERROR") span.classList.add("error");
+                    div.appendChild(span);
+                });
+
+                // Dibujar nodos (estados) por cada token
+                const estados = [];
+                tokens.forEach((t, i) => {
+                    const cx = startX + i * gap;
+
+                    // Dibuja el círculo
+                    const circle = paper.circle(cx, startY, circleRadius).attr({ 
+                        fill: "#dbeafe", 
+                        stroke: "#3b82f6", 
+                        "stroke-width": 2 
+                    });
+
+                    // Dibuja el tipo de token
+                    const label = paper.text(cx, startY, t.tipo).attr({ "font-size": 13 });
+
+                    // Dibuja el valor del token debajo
+                    const valor = paper.text(cx, startY + 40, `\"${t.valor}\"`).attr({ 
+                        "font-size": 11, 
+                        fill: "#374151" 
+                    });
+
+                    estados.push({ circle, label, valor });
+
+                    // Flechas entre nodos
+                    if (i > 0) {
+                        const x1 = startX + (i - 1) * gap + circleRadius;
+                        const x2 = cx - circleRadius;
+
+                        // Línea
+                        paper.path(`M${x1},${startY}L${x2},${startY}`)
+                             .attr({ stroke: "#4b5563", "stroke-width": 2 });
+
+                        // Punta de flecha
+                        paper.path(`M${x2 - 6},${startY - 5}L${x2},${startY}L${x2 - 6},${startY + 5}`)
+                             .attr({ fill: "#4b5563" });
+                    }
+                });
+
+                // Animación: resaltar un nodo por turno
+                let i = 0;
+                function animar() {
+                    if (i > 0) {
+                        estados[i - 1].circle.attr({ stroke: "#3b82f6", "stroke-width": 2 }); // desresaltar anterior
+                    }
+                    if (i < estados.length) {
+                        estados[i].circle.attr({ stroke: "#ef4444", "stroke-width": 4 }); // resaltar actual
+                        i++;
+                        setTimeout(animar, 800); // esperar 800ms y avanzar
+                    }
+                }
+                animar();
+            })
+            .catch(() => {
+                // Error al cargar tokens.json
+                document.getElementById("tokens").innerText = "❌ No se pudo cargar tokens.json";
+            });
+    </script>
+</body>
+
+</html>
