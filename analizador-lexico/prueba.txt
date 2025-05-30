@@ -1,0 +1,34 @@
+nombre = "Luis";
+apellido = "Mendoza";
+edad = 21;
+nota1 = 14;
+nota2 = 17;
+nota3 = 19;
+
+promedio = (nota1 + nota2 + nota3) / 3;
+estado = promedio >= 15;
+
+if (estado == true) {
+    resultado = "Aprobado";
+} else {
+    resultado = "Reprobado";
+}
+
+i = 0;
+total = 0;
+while (i < 5) {
+    total = total + i;
+    i = i + 1;
+}
+
+mensaje = "Finalizado.";
+nota_decimal = 17.5;
+codigo_postal = 110206;
+
+if (nota_decimal >= 18.0) {
+    mensaje = "Excelente desempeño";
+} else {
+    mensaje = "Buen trabajo";
+}
+
+return;

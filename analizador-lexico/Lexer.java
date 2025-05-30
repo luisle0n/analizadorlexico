@@ -4,50 +4,54 @@ import java.util.regex.*;
 
 public class Lexer {
 
+    // Palabras reservadas del lenguaje
+    private static final Set<String> PALABRAS_RESERVADAS = new HashSet<>(Arrays.asList(
+            "if", "else", "while", "true", "false", "for", "return"
+    ));
+
     public static void main(String[] args) {
-        File archivo = new File("programa.txt");
+        File archivo = new File("prueba.txt");
         List<Token> tokens = new ArrayList<>();
 
-        // Lectura línea por línea del archivo de entrada
         try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
             String linea;
             while ((linea = br.readLine()) != null) {
-                analizarLinea(linea.trim(), tokens); // Análisis léxico de cada línea
+                analizarLinea(linea.trim(), tokens);
             }
         } catch (IOException e) {
             System.out.println("❌ Error al leer el archivo: " + e.getMessage());
             return;
         }
 
-        // Mostrar tokens en consola
+        // Mostrar tokens
         for (int i = 0; i < tokens.size(); i++) {
             Token t = tokens.get(i);
             System.out.printf("%d. [%s] → \"%s\"\n", i + 1, t.tipo, t.valor);
         }
 
-        // Guardar los tokens en formato JSON
+        // Generar archivo tokens.json
         guardarComoJson(tokens);
     }
 
-    // Función para analizar léxicamente una línea de texto
     public static void analizarLinea(String linea, List<Token> tokens) {
-        // Expresión regular para identificar distintos tipos de tokens
-        String patron =
-                "(>=|<=|==|!=|>|<)|" +                      // [1] Operadores relacionales
-                "(\\d+(\\.\\d+)?)|" +                       // [2] Números (enteros y decimales)
-                "([a-zA-Z_][a-zA-Z0-9_]*)|" +               // [4] Identificadores
-                "(=)|" +                                    // [5] Asignación
-                "(;)|" +                                    // [6] Fin de instrucción
-                "([+\\-*/])|" +                             // [7] Operadores matemáticos
-                "(\\()|" +                                  // [8] Paréntesis izquierdo
-                "(\\))";                                    // [9] Paréntesis derecho
+        String patron = 
+                "(\"[^\"]*\")|" +         // Grupo 1: STRING
+                "(>=|<=|==|!=|>|<)|" +   // Grupo 2: REL_OP
+                "(\\d+(\\.\\d+)?)|" +    // Grupo 3: NUM
+                "([a-zA-Z_][a-zA-Z0-9_]*)|" + // Grupo 4: ID o palabra reservada
+                "(=)|" +                 // Grupo 5: ASSIGN
+                "(;)|" +                 // Grupo 6: END
+                "([+\\-*/])|" +          // Grupo 7: OP
+                "(\\()|" +              // Grupo 8: LPAREN
+                "(\\))|" +              // Grupo 9: RPAREN
+                "(\\{)|" +              // Grupo 10: DELIM apertura
+                "(\\})";                // Grupo 11: DELIM cierre
 
         Pattern pattern = Pattern.compile(patron);
         Matcher matcher = pattern.matcher(linea);
 
         int pos = 0;
         while (matcher.find()) {
-            // Detectar texto no reconocido (posible error léxico)
             if (matcher.start() > pos) {
                 String error = linea.substring(pos, matcher.start()).trim();
                 if (!error.isEmpty()) {
@@ -55,13 +59,12 @@ public class Lexer {
                 }
             }
 
-            // Clasificación del token según el grupo coincidente
             if (matcher.group(1) != null) {
-                tokens.add(new Token("REL_OP", matcher.group()));
+                tokens.add(new Token("STRING", matcher.group()));
             } else if (matcher.group(2) != null) {
+                tokens.add(new Token("REL_OP", matcher.group()));
+            } else if (matcher.group(3) != null) {
                 tokens.add(new Token("NUM", matcher.group()));
-            } else if (matcher.group(4) != null) {
-                tokens.add(new Token("ID", matcher.group()));
             } else if (matcher.group(5) != null) {
                 tokens.add(new Token("ASSIGN", matcher.group()));
             } else if (matcher.group(6) != null) {
@@ -72,12 +75,20 @@ public class Lexer {
                 tokens.add(new Token("LPAREN", matcher.group()));
             } else if (matcher.group(9) != null) {
                 tokens.add(new Token("RPAREN", matcher.group()));
+            } else if (matcher.group(10) != null || matcher.group(11) != null) {
+                tokens.add(new Token("DELIM", matcher.group()));
+            } else if (matcher.group(4) != null) {
+                String palabra = matcher.group(4);
+                if (PALABRAS_RESERVADAS.contains(palabra)) {
+                    tokens.add(new Token("RESERVED", palabra));
+                } else {
+                    tokens.add(new Token("ID", palabra));
+                }
             }
 
             pos = matcher.end();
         }
 
-        // Capturar posibles caracteres restantes no reconocidos
         if (pos < linea.length()) {
             String rem = linea.substring(pos).trim();
             if (!rem.isEmpty()) {
@@ -86,12 +97,11 @@ public class Lexer {
         }
     }
 
-    // Guardar la lista de tokens como archivo JSON
     public static void guardarComoJson(List<Token> tokens) {
         try {
             File carpeta = new File("automata");
             if (!carpeta.exists()) {
-                carpeta.mkdirs(); // Crear la carpeta si no existe
+                carpeta.mkdirs();
             }
 
             PrintWriter writer = new PrintWriter("automata/tokens.json");
@@ -99,9 +109,13 @@ public class Lexer {
             writer.println("[");
             for (int i = 0; i < tokens.size(); i++) {
                 Token t = tokens.get(i);
-                writer.print("  { \"tipo\": \"" + t.tipo + "\", \"valor\": \"" + t.valor + "\" }");
-                if (i < tokens.size() - 1) writer.println(",");
-                else writer.println();
+                String valorEscapado = t.valor.replace("\"", "\\\""); // ⚠️ escapar comillas dobles
+                writer.print("  { \"tipo\": \"" + t.tipo + "\", \"valor\": \"" + valorEscapado + "\" }");
+                if (i < tokens.size() - 1) {
+                    writer.println(",");
+                } else {
+                    writer.println();
+                }
             }
             writer.println("]");
             writer.close();
@@ -113,7 +127,6 @@ public class Lexer {
     }
 }
 
-// Clase Token: representa un token con tipo y valor
 class Token {
     public String tipo;
     public String valor;
