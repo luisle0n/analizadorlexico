@@ -3,37 +3,29 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Autómata Léxico</title>
+    <title>Autómata Léxico </title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
     <style>
         body {
             font-family: sans-serif;
-            text-align: center;
             background-color: #f0f4f8;
         }
 
-        #canvas-container {
-            width: 100%;
-            overflow-x: auto;
-        }
-
         #canvas {
-            width: 3000px;
-            height: 500px;
+            width: 100%;
+            height: 750px;
             border: 1px solid #ccc;
-            background-color: #ffffff;
+            background-color: #fff;
+            margin: auto;
         }
 
         #tokens {
-            margin-top: 20px;
-            text-align: left;
+            margin: 20px auto;
             width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-            background: #ffffff;
+            background: #fff;
             padding: 1rem;
             border-radius: 0.5rem;
-            box-shadow: 0px 0px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
         }
 
         .error {
@@ -44,59 +36,109 @@
 </head>
 
 <body>
-    <h2>Autómata Léxico (Visualización Dinámica)</h2>
-    <div id="canvas-container">
-        <div id="canvas"></div>
-    </div>
+    <h2 style="text-align:center;">Autómata Léxico </h2>
+    <div id="canvas"></div>
     <div id="tokens">Cargando tokens...</div>
 
     <script>
-        const canvasWidth = 10000;
-        const paper = Raphael("canvas", canvasWidth, 500);
-        const circleRadius = 30;
-        const startX = 60;
-        const startY = 200;
-        const gap = 100;
+        const paper = Raphael("canvas", 1000, 750);
+        const r = 30;
 
+        const nodos = {
+            q0: { x: 100, y: 300 },
+            q1: { x: 300, y: 400 },
+            q2: { x: 280, y: 200 },
+            q3: { x: 220, y: 100 },
+
+            q4: { x: 100, y: 500 },
+            q5: { x: 500, y: 300 },
+            q6: { x: 700, y: 350 }
+        };
+
+        const finales = ["q1", "q3", "q6", "q4"];
+
+        for (const [id, pos] of Object.entries(nodos)) {
+            paper.circle(pos.x, pos.y, r).attr({ fill: "#ffffcc", stroke: "#666" });
+            if (finales.includes(id)) {
+                paper.circle(pos.x, pos.y, r - 5).attr({ stroke: "#333" });
+            }
+            paper.text(pos.x, pos.y, id);
+        }
+
+        function flechaConEtiqueta(from, to, label) {
+            const x1 = nodos[from].x;
+            const y1 = nodos[from].y;
+            const x2 = nodos[to].x;
+            const y2 = nodos[to].y;
+
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const offsetX = r * Math.cos(angle);
+            const offsetY = r * Math.sin(angle);
+
+            const startX = x1 + offsetX;
+            const startY = y1 + offsetY;
+            const endX = x2 - offsetX;
+            const endY = y2 - offsetY;
+
+            paper.path(`M${startX},${startY}L${endX},${endY}`).attr({ stroke: "#333", "stroke-width": 2 });
+
+            // Flechita
+            const arrowSize = 6;
+            const arrowX = endX - arrowSize * Math.cos(angle - Math.PI / 6);
+            const arrowY = endY - arrowSize * Math.sin(angle - Math.PI / 6);
+            const arrowX2 = endX - arrowSize * Math.cos(angle + Math.PI / 6);
+            const arrowY2 = endY - arrowSize * Math.sin(angle + Math.PI / 6);
+            paper.path(`M${arrowX},${arrowY}L${endX},${endY}L${arrowX2},${arrowY2}`).attr({ fill: "#333" });
+
+            // Etiqueta
+            const labelX = (startX + endX) / 2;
+            const labelY = (startY + endY) / 2 - 15;
+            paper.text(labelX, labelY, label).attr({ "font-size": 12 });
+        }
+
+        function bucleCentral(id, label) {
+            const x = nodos[id].x;
+            const y = nodos[id].y;
+
+            paper.path(`M${x - 20},${y - r}
+                C${x - 20},${y - r - 50} ${x + 20},${y - r - 50} ${x + 20},${y - r}`)
+                .attr({ stroke: "#333", "stroke-width": 2, fill: "none" });
+
+            paper.path(`M${x + 14},${y - r - 5}L${x + 20},${y - r}L${x + 26},${y - r - 5}`).attr({ fill: "#333" });
+
+            paper.text(x, y - r - 55, label).attr({ "font-size": 12 });
+        }
+
+        // Transiciones
+        flechaConEtiqueta("q0", "q1", "l");
+        flechaConEtiqueta("q0", "q2", "n");
+        flechaConEtiqueta("q0", "q5", "+ - * / = ! < >");
+        flechaConEtiqueta("q0", "q4", "\\\" ; , { } ( )");
+        flechaConEtiqueta("q1", "q1", "n");
+        flechaConEtiqueta("q2", "q2", "n");
+        flechaConEtiqueta("q2", "q3", ".");
+        flechaConEtiqueta("q2", "q5", "' , . \\\"");
+        flechaConEtiqueta("q3", "q3", "n");
+        flechaConEtiqueta("q5", "q6", "=");
+
+
+        // Bucles estilo ∩ en q1, q2, q3
+        bucleCentral("q1", "n l");
+        bucleCentral("q2", "n");
+        bucleCentral("q3", "n");
+
+        // Mostrar tokens desde JSON
         fetch("tokens.json")
             .then(res => res.json())
             .then(tokens => {
                 const div = document.getElementById("tokens");
                 div.innerHTML = "<h3>Tokens Reconocidos:</h3>";
-
                 tokens.forEach((t, i) => {
                     const span = document.createElement("div");
                     span.textContent = `${i + 1}. [${t.tipo}] → "${t.valor}"`;
                     if (t.tipo === "ERROR") span.classList.add("error");
                     div.appendChild(span);
                 });
-
-                const estados = [];
-                tokens.forEach((t, i) => {
-                    const cx = startX + i * gap;
-                    const circle = paper.circle(cx, startY, circleRadius).attr({ fill: "#dbeafe", stroke: "#3b82f6", "stroke-width": 2 });
-                    const label = paper.text(cx, startY, t.tipo).attr({ "font-size": 13 });
-                    const valor = paper.text(cx, startY + 40, `\"${t.valor}\"`).attr({ "font-size": 11, fill: "#374151" });
-                    estados.push({ circle, label, valor });
-
-                    if (i > 0) {
-                        const x1 = startX + (i - 1) * gap + circleRadius;
-                        const x2 = cx - circleRadius;
-                        paper.path(`M${x1},${startY}L${x2},${startY}`).attr({ stroke: "#4b5563", "stroke-width": 2 });
-                        paper.path(`M${x2 - 6},${startY - 5}L${x2},${startY}L${x2 - 6},${startY + 5}`).attr({ fill: "#4b5563" });
-                    }
-                });
-
-                let i = 0;
-                function animar() {
-                    if (i > 0) estados[i - 1].circle.attr({ stroke: "#3b82f6", "stroke-width": 2 });
-                    if (i < estados.length) {
-                        estados[i].circle.attr({ stroke: "#ef4444", "stroke-width": 4 });
-                        i++;
-                        setTimeout(animar, 800);
-                    }
-                }
-                animar();
             })
             .catch(() => {
                 document.getElementById("tokens").innerText = "❌ No se pudo cargar tokens.json";
