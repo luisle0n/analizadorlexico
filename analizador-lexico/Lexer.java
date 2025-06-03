@@ -15,7 +15,7 @@ public class Lexer {
 
         // Intenta abrir y leer el archivo línea por línea
         try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
-            String linea; // alamce temporalmente cada linea de texto 
+            String linea; // Almacena temporalmente cada línea de texto
             while ((linea = br.readLine()) != null) { // Mientras haya líneas por leer
                 analizarLinea(linea.trim(), tokens); // Llama a la función que analiza la línea (sin espacios al inicio o final)
             }
@@ -27,30 +27,30 @@ public class Lexer {
         // Recorre e imprime los tokens generados
         for (int i = 0; i < tokens.size(); i++) {
             Token t = tokens.get(i); // Obtiene el token en la posición i de la lista
-            System.out.printf("%d. [%s] → \"%s\"\n", i + 1, t.tipo, t.valor); // Imprime número, tipo y valor del token
+            System.out.printf("%d. [%s] ? \"%s\"\n", i + 1, t.tipo, t.valor); // Imprime número, tipo y valor del token
         }
 
         guardarComoJson(tokens); // Llama a la función que guarda los tokens en un archivo JSON
     }
 
-    // Método que analiza una línea de código y genera los tokens
+    // Método que analiza una línea de código y genera los tokens correspondientes
     public static void analizarLinea(String linea, List<Token> tokens) {
-        // Expresión regular que define 11 grupos para reconocer tipos de tokens
+        // Expresión regular con 12 grupos para identificar distintos tipos de tokens
         String patron =
-            "(\"[^\"]*\")|" + // Grupo 1: Cadenas STRING entre comillas dobles
-            "(>=|<=|==|!=|>|<)|" + // Grupo 2: Operadores relacionales
-            "(\\d+(\\.\\d+)?)|" + // Grupo 3: Números enteros o decimales
+            "(\"[^\"]*\")|" +             // Grupo 1: Cadenas STRING entre comillas dobles
+            "(>=|<=|==|!=|>|<)|" +        // Grupo 2: Operadores relacionales
+            "(\\d+(\\.\\d+)?)|" +         // Grupo 3: Números enteros o decimales
             "([a-zA-Z_][a-zA-Z0-9_]*)|" + // Grupo 4: Identificadores o palabras reservadas
-            "(=)|" + // Grupo 5: Operador de asignación (=)
-            "(;)|" + // Grupo 6: Punto y coma (fin de instrucción)
-            "([+\\-*/])|" + // Grupo 7: Operadores aritméticos
-            "(\\()|" + // Grupo 8: Paréntesis izquierdo
-            "(\\))|" + // Grupo 9: Paréntesis derecho
-            "(\\{)|" + // Grupo 10: Llave de apertura
-            "(\\})"; // Grupo 11: Llave de cierre
+            "(=)|" +                      // Grupo 5: Operador de asignación (=)
+            "(;)|" +                      // Grupo 6: Punto y coma
+            "([+\\-*/])|" +               // Grupo 7: Operadores aritméticos
+            "(\\()|" +                    // Grupo 8: Paréntesis izquierdo
+            "(\\))|" +                    // Grupo 9: Paréntesis derecho
+            "(\\{)|" +                    // Grupo 10: Llave de apertura
+            "(\\})";                     // Grupo 11: Llave de cierre
 
-        Pattern pattern = Pattern.compile(patron); // Compila la expresión regular
-        Matcher matcher = pattern.matcher(linea); // Aplica el patrón a la línea dada
+        Pattern pattern = Pattern.compile(patron); // Compila el patrón de expresión regular
+        Matcher matcher = pattern.matcher(linea);  // Aplica el patrón a la línea actual
 
         int pos = 0; // Marca la posición inicial del análisis
         while (matcher.find()) { // Recorre todas las coincidencias que se encuentran en la línea
@@ -65,33 +65,35 @@ public class Lexer {
 
             // Identifica a qué grupo pertenece el token encontrado
             if (matcher.group(1) != null) {
-                tokens.add(new Token("STRING", matcher.group()));
+                tokens.add(new Token("STRING", matcher.group(1))); // Cadena entre comillas
             } else if (matcher.group(2) != null) {
-                tokens.add(new Token("REL_OP", matcher.group()));
+                tokens.add(new Token("REL_OP", matcher.group(2))); // Operadores relacionales
             } else if (matcher.group(3) != null) {
-                tokens.add(new Token("NUM", matcher.group()));
+                tokens.add(new Token("NUM", matcher.group(3))); // Número entero o decimal
             } else if (matcher.group(5) != null) {
-                tokens.add(new Token("ASSIGN", matcher.group()));
-            } else if (matcher.group(6) != null) {
-                tokens.add(new Token("END", matcher.group()));
-            } else if (matcher.group(7) != null) {
-                tokens.add(new Token("OP", matcher.group()));
-            } else if (matcher.group(8) != null) {
-                tokens.add(new Token("LPAREN", matcher.group()));
-            } else if (matcher.group(9) != null) {
-                tokens.add(new Token("RPAREN", matcher.group()));
-            } else if (matcher.group(10) != null || matcher.group(11) != null) {
-                tokens.add(new Token("DELIM", matcher.group()));
-            } else if (matcher.group(4) != null) { // Si es un identificador o palabra reservada
-                String palabra = matcher.group(4);
+                String palabra = matcher.group(5); // Puede ser palabra reservada o identificador
                 if (PALABRAS_RESERVADAS.contains(palabra)) {
-                    tokens.add(new Token("RESERVED", palabra)); // Si es reservada, tipo RESERVED
+                    tokens.add(new Token("RESERVED", palabra)); // Palabra reservada
                 } else {
-                    tokens.add(new Token("ID", palabra)); // Si no, tipo ID
+                    tokens.add(new Token("ID", palabra)); // Identificador válido
                 }
+            } else if (matcher.group(6) != null) {
+                tokens.add(new Token("ASSIGN", matcher.group(6))); // Operador de asignación
+            } else if (matcher.group(7) != null) {
+                tokens.add(new Token("END", matcher.group(7))); // Punto y coma
+            } else if (matcher.group(8) != null) {
+                tokens.add(new Token("OP", matcher.group(8))); // Operador aritmético
+            } else if (matcher.group(9) != null) {
+                tokens.add(new Token("LPAREN", matcher.group(9))); // Paréntesis izquierdo
+            } else if (matcher.group(10) != null) {
+                tokens.add(new Token("RPAREN", matcher.group(10))); // Paréntesis derecho
+            } else if (matcher.group(11) != null) {
+                tokens.add(new Token("DELIM", matcher.group(11))); // Llave de apertura
+            } else if (matcher.group(12) != null) {
+                tokens.add(new Token("DELIM", matcher.group(12))); // Llave de cierre
             }
 
-            pos = matcher.end(); // Actualiza la posición para continuar la búsqueda y ver en q pocion termina
+            pos = matcher.end(); // Actualiza la posición para continuar
         }
 
         // Revisa si quedó texto al final no reconocido como token
@@ -103,7 +105,7 @@ public class Lexer {
         }
     }
 
-    // Método que guarda los tokens en formato JSON
+    // Método que guarda los tokens en un archivo JSON
     public static void guardarComoJson(List<Token> tokens) {
         try {
             File carpeta = new File("automata");
@@ -122,16 +124,16 @@ public class Lexer {
 
             writer.println("]");
             writer.close(); // Cierra el archivo
-            System.out.println("\u2705 tokens.json generado en /automata/");
+            System.out.println("✅ tokens.json generado en /automata/");
         } catch (IOException e) {
-            System.out.println("\u274c Error al guardar tokens.json: " + e.getMessage());
+            System.out.println("❌ Error al guardar tokens.json: " + e.getMessage()); // Muestra mensaje si falla escritura
         }
     }
 }
 
 // Clase que representa un token con tipo y valor
 class Token {
-    public String tipo; // Tipo del token (NUM, STRING, ID, etc.)
+    public String tipo;  // Tipo del token (NUM, STRING, ID, etc.)
     public String valor; // Valor exacto del texto que fue reconocido
 
     public Token(String tipo, String valor) {
